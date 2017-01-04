@@ -1,9 +1,6 @@
 package org.embulk.input.cassandra;
 
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Row;
-import com.datastax.driver.core.Session;
+import com.datastax.driver.core.*;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -24,9 +21,23 @@ public class CassandraTest {
         // 172.17.0.2
         Cluster cluster = null;
         try {
-            cluster = Cluster.builder()
+            Cluster.Builder clusterBuilder = Cluster.builder()
                     .addContactPoint("172.17.0.2")
-                    .build();
+                    //.withQueryOptions(options)
+                    //.withSocketOptions(socketOptions)
+                    //.withPoolingOptions(poolOptions)
+                    .withPort(9042)
+                    .withClusterName("test");
+                    //.withTimestampGenerator(ControllableTimestampGenerator.INSTANCE)
+                    //.withCompression(setting.getCompression().getCompressionType())
+                    //.withReconnectionPolicy(setting.getReconnectionPolicy().getDriverInstance())
+                    //.withLoadBalancingPolicy(setting.getLoadBalancingPolicy().getDriverInstance())
+                    //.withRetryPolicy(setting.getRetryPolicy().getDriverInstance());
+
+            AuthProvider authProvider = new PlainTextAuthProvider("dev", "dev");
+            clusterBuilder.withAuthProvider(authProvider);
+
+            cluster = clusterBuilder.build();
             Session session = cluster.connect();
             ResultSet rs = session.execute("select release_version from system.local");
             Row row = rs.one();
