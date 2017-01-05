@@ -2,18 +2,8 @@ package org.embulk.input.cassandra;
 
 import java.util.List;
 import com.google.common.base.Optional;
-import org.embulk.config.TaskReport;
-import org.embulk.config.Config;
-import org.embulk.config.ConfigDefault;
-import org.embulk.config.ConfigDiff;
-import org.embulk.config.ConfigSource;
-import org.embulk.config.Task;
-import org.embulk.config.TaskSource;
-import org.embulk.spi.Exec;
-import org.embulk.spi.InputPlugin;
-import org.embulk.spi.PageOutput;
-import org.embulk.spi.Schema;
-import org.embulk.spi.SchemaConfig;
+import org.embulk.config.*;
+import org.embulk.spi.*;
 
 public class CassandraInputPlugin
         implements InputPlugin
@@ -21,23 +11,51 @@ public class CassandraInputPlugin
     public interface PluginTask
             extends Task
     {
-        // configuration option 1 (required integer)
-        @Config("option1")
-        public int getOption1();
-
-        // configuration option 2 (optional string, null is not allowed)
-        @Config("option2")
-        @ConfigDefault("\"myvalue\"")
-        public String getOption2();
-
-        // configuration option 3 (optional string, null is allowed)
-        @Config("option3")
+        @Config("host")
         @ConfigDefault("null")
-        public Optional<String> getOption3();
+        Optional<String> getHost();
 
-        // if you get schema from config
+        @Config("port")
+        @ConfigDefault("1521")
+        int getPort();
+
+        @Config("schema")
+        @ConfigDefault("null")
+        Optional<String> getSchema();
+
+        @Config("user")
+        @ConfigDefault("null")
+        Optional<String> getUser();
+
+        @Config("password")
+        @ConfigDefault("null")
+        Optional<String> getPassword();
+
+        @Config("table")
+        @ConfigDefault("null")
+        Optional<String> getTable();
+
+        @Config("query")
+        @ConfigDefault("null")
+        Optional<String> getQuery();
+
+        @Config("select")
+        @ConfigDefault("null")
+        Optional<String> getSelect();
+
+        @Config("where")
+        @ConfigDefault("null")
+        Optional<String> getWhere();
+
+        @Config("order_by")
+        @ConfigDefault("null")
+        Optional<String> getOrderBy();
+
         @Config("columns")
-        public SchemaConfig getColumns();
+        SchemaConfig getColumns();
+
+        @ConfigInject
+         BufferAllocator getBufferAllocator();
     }
 
     @Override
@@ -75,6 +93,9 @@ public class CassandraInputPlugin
     {
         PluginTask task = taskSource.loadTask(PluginTask.class);
 
+        BufferAllocator allocator = task.getBufferAllocator();
+        PageBuilder pageBuilder = new PageBuilder(allocator, schema, output);
+
         // Write your code here :)
         throw new UnsupportedOperationException("CassandraInputPlugin.run method is not implemented yet");
     }
@@ -83,5 +104,25 @@ public class CassandraInputPlugin
     public ConfigDiff guess(ConfigSource config)
     {
         return Exec.newConfigDiff();
+    }
+
+    private CassandraConnection newConnection(PluginTask task) {
+        // TODO
+        return null;
+    }
+
+    private String getRawQuery(PluginTask task, CassandraConnection con) {
+        if (task.getQuery().isPresent()) {
+            if (task.getTable().isPresent() || task.getSelect().isPresent() ||
+                    task.getWhere().isPresent() || task.getOrderBy().isPresent()) {
+                throw new ConfigException("'table', 'select', 'where' and 'order_by' parameters are unnecessary if 'query' parameter is set.");
+            }
+            return task.getQuery().get();
+        } else if (task.getTable().isPresent()) {
+            return con.buildSelectQuery(task.getTable().get(), task.getSelect(),
+                    task.getWhere(), task.getOrderBy());
+        } else {
+            throw new ConfigException("'table' or 'query' parameter is required");
+        }
     }
 }
