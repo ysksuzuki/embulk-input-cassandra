@@ -13,7 +13,7 @@ public class CassandraConnection implements Closeable {
     public CassandraConnection(CassandraSettings settings) {
         Cluster.Builder clusterBuilder = clusterBuilder(settings);
         this.cluster = clusterBuilder.build();
-        this.session = this.cluster.connect();
+        this.session = this.cluster.connect(settings.getSchema());
     }
 
     private Cluster.Builder clusterBuilder(CassandraSettings settings) {
@@ -36,6 +36,7 @@ public class CassandraConnection implements Closeable {
                 .setMaxRequestsPerConnection(HostDistance.REMOTE, settings.getMaxRequestsPerConnectionRemote());
 
         Cluster.Builder clusterBuilder = Cluster.builder()
+                .withClusterName(settings.getClusterName())
                 .withQueryOptions(options)
                 .withSocketOptions(socketOptions)
                 .withPoolingOptions(poolOptions)

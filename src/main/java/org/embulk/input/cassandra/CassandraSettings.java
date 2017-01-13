@@ -6,12 +6,13 @@ import com.datastax.driver.core.policies.*;
 import lombok.Builder;
 import lombok.Getter;
 
-@Builder
 @Getter
+@Builder
 public class CassandraSettings {
     private String[] hosts;
     private int nativeTransportPort = DefaultSettingValues.NATIVE_TRANSPORT_PORT;
     private int thriftPort = DefaultSettingValues.THRIFT_PORT;
+    private String clusterName;
     private String schema;
     private String user;
     private String password;
@@ -43,13 +44,54 @@ public class CassandraSettings {
     private Integer maxRequestsPerConnectionRemote = DefaultSettingValues.MAX_REQUESTS_PER_CONNECTION_REMOTE;
 
     public ConsistencyLevel getDefaultConsistencyLevel() {
-        if (readLevel.compareTo(writeLevel) < 0) {
-            return writeLevel;
+        if (this.getReadLevel().compareTo(this.getWriteLevel()) < 0) {
+            return this.getWriteLevel();
         }
-        return readLevel;
+        return this.getReadLevel();
     }
 
     public boolean hasAuth() {
         return user != null && !user.isEmpty();
     }
+
+    public ConsistencyLevel getSerialLevel() {
+        return serialLevel != null ? serialLevel : DefaultSettingValues.SERIAL_LEVEL;
+    }
+    public ConsistencyLevel getReadLevel() {
+        return readLevel != null ? readLevel : DefaultSettingValues.READ_LEVEL;
+    }
+
+    public ConsistencyLevel getWriteLevel() {
+        return writeLevel != null ? writeLevel : DefaultSettingValues.WRITE_LEVEL;
+    }
+
+    public Integer getFetchSize() {
+        return fetchSize != null ? fetchSize : DefaultSettingValues.FETCH_SIZE;
+    }
+    public Integer getReadTimeoutSecond() {
+        return readTimeoutSecond != null ? readTimeoutSecond : DefaultSettingValues.READ_TIMEOUT_SECOND;
+    }
+    public Integer getConnectionTimeoutSecond() {
+        return connectionTimeoutSecond != null ? connectionTimeoutSecond : DefaultSettingValues.CONNECTION_TIMEOUT_SECOND;
+    }
+    public Integer getCoreConnectionsPerHostLocal() {
+        return coreConnectionsPerHostLocal != null ? coreConnectionsPerHostLocal : DefaultSettingValues.CORE_CONNECTIONS_PER_HOST_LOCAL;
+    }
+    public Integer getMaxConnectionsPerHostLocal() {
+        return maxConnectionsPerHostLocal != null ? maxConnectionsPerHostLocal : DefaultSettingValues.MAX_CONNECTIONS_PER_HOST_LOCAL;
+    }
+    public Integer getCoreConnectionsPerHostRemote() {
+        return coreConnectionsPerHostRemote != null ? coreConnectionsPerHostRemote : DefaultSettingValues.CORE_CONNECTIONS_PER_HOST_REMOTE;
+    }
+    public Integer getMaxConnectionsPerHostRemote() {
+        return maxConnectionsPerHostRemote != null ? maxConnectionsPerHostRemote : DefaultSettingValues.MAX_CONNECTIONS_PER_HOST_REMOTE;
+    }
+    public Integer getMaxRequestsPerConnectionLocal() {
+        return maxRequestsPerConnectionLocal != null ? maxRequestsPerConnectionLocal : DefaultSettingValues.MAX_REQUESTS_PER_CONNECTION_LOCAL;
+    }
+    public Integer getMaxRequestsPerConnectionRemote() {
+        return maxRequestsPerConnectionRemote != null ? maxConnectionsPerHostRemote : DefaultSettingValues.MAX_REQUESTS_PER_CONNECTION_REMOTE;
+    }
+
+
 }

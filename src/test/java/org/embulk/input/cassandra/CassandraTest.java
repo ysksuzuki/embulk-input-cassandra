@@ -1,9 +1,13 @@
 package org.embulk.input.cassandra;
 
 import com.datastax.driver.core.*;
+import com.google.common.base.Optional;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.Assert.*;
 
@@ -17,35 +21,30 @@ public class CassandraTest {
     }
 
     @Test
-    public void test() {
-        // 172.17.0.2
-        Cluster cluster = null;
-        try {
-            Cluster.Builder clusterBuilder = Cluster.builder()
-                    .addContactPoint("172.17.0.2")
-                    //.withQueryOptions(options)
-                    //.withSocketOptions(socketOptions)
-                    //.withPoolingOptions(poolOptions)
-                    .withPort(9042)
-                    .withClusterName("test");
-                    //.withTimestampGenerator(ControllableTimestampGenerator.INSTANCE)
-                    //.withCompression(setting.getCompression().getCompressionType())
-                    //.withReconnectionPolicy(setting.getReconnectionPolicy().getDriverInstance())
-                    //.withLoadBalancingPolicy(setting.getLoadBalancingPolicy().getDriverInstance())
-                    //.withRetryPolicy(setting.getRetryPolicy().getDriverInstance());
-
-            AuthProvider authProvider = new PlainTextAuthProvider("dev", "dev");
-            clusterBuilder.withAuthProvider(authProvider);
-
-            cluster = clusterBuilder.build();
-            Session session = cluster.connect();
-            ResultSet rs = session.execute("select release_version from system.local");
-            Row row = rs.one();
-            System.out.println(row.getString("release_version"));
-        } catch (Throwable e) {
-            e.printStackTrace();
-        } finally {
-            if (cluster != null) cluster.close();
+    public void cassandraConnectionTest() {
+        CassandraSettings settings = CassandraSettings.builder()
+                .hosts(new String[] {"172.16.210.177"})
+                .nativeTransportPort(9042)
+                .clusterName("scheduler")
+                .schema("scheduler")
+                .user("dev").password("dev")
+                .build();
+        try (CassandraConnection connection = new CassandraConnection(settings)) {
+            ResultSet resultSet = connection.execute(
+                    connection.buildSelectQuery("scheduler_country_holiday", Optional.<String>absent(),
+                            Optional.<String>absent(), Optional.<String>absent()));
+            List<CassandraRowHandler.RowHandler> handlers = new ArrayList<>();
+            for (ColumnDefinitions.Definition definition : resultSet.getColumnDefinitions()) {
+                handlers.add(CassandraRowHandler.getHandler(definition.getType().getName()));
+            }
+            for (Row row : resultSet) {
+                int ix = 0;
+                for (CassandraRowHandler.RowHandler handler : handlers) {
+                    handler.handle(row, ix);
+                    ix++;
+                }
+                System.out.println("");
+            }
         }
     }
 }
